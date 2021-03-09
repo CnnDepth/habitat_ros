@@ -1,0 +1,6 @@
+<launch>
+<node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
+  <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d.yaml"/>
+  <param name="agent_type" value="keyboard"/>
+</node>
+</launch>
