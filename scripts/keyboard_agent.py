@@ -34,7 +34,6 @@ class KeyboardAgent(habitat.Agent):
         if len(actions) > 0:
             for action in actions[:-1]:
                 env.step(action)
-        print('Actions:', actions)
         if len(actions) > 0:
             return actions[-1]
         else:
