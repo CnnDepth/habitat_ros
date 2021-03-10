@@ -3,18 +3,9 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 import keyboard
 
 class KeyboardAgent(habitat.Agent):
-    def __init__(self, 
-                 save_observations=True,
-                 rgb_topic='/habitat/rgb/image',
-                 depth_topic='/habitat/depth/image',
-                 camera_info_topic='/habitat/rgb/camera_info',
-                 path_topic='/true_path',
-                 pose_topic='/true_pose',
-                 odometry_topic='/true_odom',
-                 publish_odom=False):
+    def __init__(self):
         self.speed = 0.
         self.twist = 1.
-        self.time_of_publish = 0
 
     def reset(self):
         pass
@@ -43,6 +34,7 @@ class KeyboardAgent(habitat.Agent):
         if len(actions) > 0:
             for action in actions[:-1]:
                 env.step(action)
+        print('Actions:', actions)
         if len(actions) > 0:
             return actions[-1]
         else:
