@@ -3,6 +3,7 @@
 import rospy
 import habitat
 from keyboard_agent import KeyboardAgent
+from shortest_path_follower_agent import ShortestPathFollowerAgent
 from custom_sensors import AgentPositionSensor
 from publishers import HabitatObservationPublisher
 
@@ -38,12 +39,15 @@ def main():
     config.freeze()
 
     # Initialize the agent and environment
+    env = habitat.Env(config=config)
     if agent_type == 'keyboard':
        agent = KeyboardAgent()
+    elif agent_type == 'shortest_path_follower':
+        goal_radius = 0.25
+        agent = ShortestPathFollowerAgent(env, goal_radius)
     else:
         print('AGENT TYPE {} IS NOT DEFINED!!!'.format(agent_type))
         return
-    env = habitat.Env(config=config)
 
     # Run the simulator with agent
     observations = env.reset()

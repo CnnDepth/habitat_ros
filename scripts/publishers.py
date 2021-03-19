@@ -100,8 +100,9 @@ class HabitatObservationPublisher:
             cur_z_angle += np.pi
             cur_pose = PoseStamped()
             cur_pose.header.stamp = cur_time
+            cur_pose.header.frame_id = 'map'
             cur_pose.pose.position.x = x
             cur_pose.pose.position.y = y
             cur_pose.pose.position.z = z
-            cur_pose.pose.orientation = cur_orientation
+            cur_pose.pose.orientation.w, cur_pose.pose.orientation.x, cur_pose.pose.orientation.y, cur_pose.pose.orientation.z = tf.quaternion_from_euler(0, 0, cur_z_angle)
             self.pose_publisher.publish(cur_pose)
