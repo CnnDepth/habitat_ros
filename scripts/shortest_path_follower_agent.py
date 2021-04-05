@@ -2,11 +2,39 @@ import rospy
 import numpy as np
 import habitat
 import tf
+import cv2
 import math
+import keyboard
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from habitat.utils.visualizations import maps
+from skimage.io import imsave
+
+
+def draw_top_down_map(info, heading, output_size):
+    top_down_map = maps.colorize_topdown_map(
+        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
+    )
+    original_map_size = top_down_map.shape[:2]
+    map_scale = np.array(
+        (1, original_map_size[1] * 1.0 / original_map_size[0])
+    )
+    new_map_size = np.round(output_size * map_scale).astype(np.int32)
+    # OpenCV expects w, h but map size is in h, w
+    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
+    map_agent_pos = info["top_down_map"]["agent_map_coord"]
+    map_agent_pos = np.round(
+        map_agent_pos * new_map_size / original_map_size
+    ).astype(np.int32)
+    top_down_map = maps.draw_agent(
+        top_down_map,
+        map_agent_pos,
+        heading - np.pi / 2,
+        agent_radius_px=top_down_map.shape[0] / 40,
+    )
+    return top_down_map
 
 
 class ShortestPathFollowerAgent(habitat.Agent):
@@ -27,8 +55,8 @@ class ShortestPathFollowerAgent(habitat.Agent):
         self.goal_pose_in_habitat_coords = None
         self.env = env
         env.reset()
-        self.start_time = rospy.Time.now()
-        self.update_time = None
+        self.update_time = rospy.Time.now()
+        self.topdown_saved = False
 
 
     def normalize(self, angle):
@@ -76,13 +104,13 @@ class ShortestPathFollowerAgent(habitat.Agent):
         # Find robot's position and orientation in SLAM and Habitat coords
         slam_x, slam_y, slam_angle = self.get_robot_pose()
         habitat_position, habitat_orientation = self.robot_pose_in_habitat_coords
-        print('Robot pose in habitat coords:', habitat_position, habitat_orientation)
+        #print('Robot pose in habitat coords:', habitat_position, habitat_orientation)
         habitat_y, habitat_z, habitat_x = habitat_position
         _, __, habitat_angle = tf.transformations.euler_from_quaternion([habitat_orientation.x, habitat_orientation.z, habitat_orientation.y, habitat_orientation.w])
 
         # Calculate transform between SLAM and Habitat coordinate systems
         d_angle = self.normalize(habitat_angle - slam_angle + np.pi)
-        print('D_ANGLE:', d_angle)
+        #print('D_ANGLE:', d_angle)
         dx = habitat_x - (slam_x * math.cos(d_angle) + slam_y * math.sin(d_angle))
         dy = habitat_y - (-slam_x * math.sin(d_angle) + slam_y * math.cos(d_angle))
 
@@ -90,7 +118,7 @@ class ShortestPathFollowerAgent(habitat.Agent):
         goal_x_rotated = goal_x * math.cos(d_angle) + goal_y * math.sin(d_angle)
         goal_y_rotated = -goal_x * math.sin(d_angle) + goal_y * math.cos(d_angle)
         self.goal_pose_in_habitat_coords = np.array([goal_y_rotated + dy, habitat_z, goal_x_rotated + dx])
-        print('GOAL COORDS IN HABITAT SYSTEM:', self.goal_pose_in_habitat_coords)
+        #print('GOAL COORDS IN HABITAT SYSTEM:', self.goal_pose_in_habitat_coords)
 
         # publish goal position in Habitat coords
         msg = PoseStamped()
@@ -107,16 +135,20 @@ class ShortestPathFollowerAgent(habitat.Agent):
 
 
     def act(self, observations, env):
+        info = env.get_metrics()
+        if info['top_down_map'] is not None and not self.topdown_saved and (rospy.Time.now() - self.update_time).to_sec() > 1:
+            topdown_map = draw_top_down_map(info, observations['heading'][0], observations['rgb'][0].shape[0])
+            imsave('/home/kirill/topdown_map.png', topdown_map)
+            self.update_time = rospy.Time.now()
+
+            print('TOPDOWN_MAP:', topdown_map)
         self.robot_pose_in_habitat_coords = observations['agent_position']
-        time_from_start = (rospy.Time.now() - self.start_time).to_sec()
-        if time_from_start < 1:
-            habitat_position, habitat_orientation = self.robot_pose_in_habitat_coords
-            print('Robot position in Habitat coords:', habitat_position)
-            _, __, habitat_angle = tf.transformations.euler_from_quaternion([habitat_orientation.x, habitat_orientation.z, habitat_orientation.y, habitat_orientation.w])
-            print('Robot angle in Habitat coords:', habitat_angle)
-            return HabitatSimActions.MOVE_FORWARD
-        elif time_from_start < 6 and time_from_start > 5:
+        if keyboard.is_pressed('left'):
             return HabitatSimActions.TURN_LEFT
+        elif keyboard.is_pressed('right'):
+            return HabitatSimActions.TURN_RIGHT
+        elif keyboard.is_pressed('up'):
+            return HabitatSimActions.MOVE_FORWARD
         elif self.goal_pose_in_habitat_coords is None:
             return HabitatSimActions.STOP
         else:

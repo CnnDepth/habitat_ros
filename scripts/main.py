@@ -2,8 +2,11 @@
 
 import rospy
 import habitat
+from std_msgs.msg import Int32
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from keyboard_agent import KeyboardAgent
 from shortest_path_follower_agent import ShortestPathFollowerAgent
+from greedy_path_follower_agent import GreedyPathFollowerAgent
 from custom_sensors import AgentPositionSensor
 from publishers import HabitatObservationPublisher
 
@@ -28,6 +31,7 @@ def main():
                                             camera_info_topic, 
                                             true_pose_topic,
                                             camera_info_file)
+    action_publisher = rospy.Publisher('habitat_action', Int32, latch=True, queue_size=100)
 
     # Now define the config for the sensor
     config = habitat.get_config(task_config)
@@ -36,24 +40,34 @@ def main():
     config.TASK.AGENT_POSITION_SENSOR.TYPE = "position_sensor"
     config.TASK.AGENT_POSITION_SENSOR.ANSWER_TO_LIFE = 42
     config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
+    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+    config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
 
     # Initialize the agent and environment
     env = habitat.Env(config=config)
+    env.reset()
     if agent_type == 'keyboard':
        agent = KeyboardAgent()
     elif agent_type == 'shortest_path_follower':
         goal_radius = 0.25
         agent = ShortestPathFollowerAgent(env, goal_radius)
+    elif agent_type == 'greedy_path_follower':
+        agent = GreedyPathFollowerAgent()
     else:
         print('AGENT TYPE {} IS NOT DEFINED!!!'.format(agent_type))
         return
 
     # Run the simulator with agent
     observations = env.reset()
+    print(env.current_episode)
+    env.step(HabitatSimActions.MOVE_FORWARD)
     while not rospy.is_shutdown():
         publisher.publish(observations)
         action = agent.act(observations, env)
+        action_msg = Int32()
+        action_msg.data = action
+        action_publisher.publish(action_msg)
         observations = env.step(action)
         rate.sleep()
 
