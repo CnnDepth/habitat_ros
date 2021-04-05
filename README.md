@@ -13,7 +13,7 @@ Integrate Habitat simulator with ROS
 
 1) Install ROS on your system ([https://www.ros.org/install/](https://www.ros.org/install/)).
 
-2) Clone this repo into your ROS workspace (e.g. `~/catkin_ws`), and run `catkin_make`.
+2) Clone this repo into your ROS workspace (e.g. `~/catkin_ws/src`), and run `catkin_make`.
 
 3) Download and build [Habitat-sim](https://github.com/facebookresearch/habitat-sim) and [Habitat-lab](https://github.com/facebookresearch/habitat-lab).
 
