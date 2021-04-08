@@ -3,9 +3,12 @@ import numpy as np
 import habitat
 import tf
 import keyboard
-from nav_msgs.msg import Path, Odometry
+from nav_msgs.msg import Path, Odometry, OccupancyGrid
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from threading import Lock
+
+
+DEFAULT_TIMEOUT_VALUE = 2
 
 
 def normalize(angle):
@@ -21,12 +24,15 @@ class GreedyPathFollowerAgent(habitat.Agent):
     def __init__(self, goal_radius=0.25, max_d_angle=0.1):
         self.path_subscriber = rospy.Subscriber('/path', Path, self.path_callback)
         self.odom_subscriber = rospy.Subscriber('/odom', Odometry, self.odom_callback)
+        self.map_subscriber = rospy.Subscriber('/projmap_resized', OccupancyGrid, self.map_callback)
         self.tf_listener = tf.TransformListener()
         self.path = []
         self.odom_pose = None
         self.goal_radius = goal_radius
         self.max_d_angle = max_d_angle
         self.mutex = Lock()
+        self.map_update_time = 0
+        self.update_timeout = DEFAULT_TIMEOUT_VALUE
 
 
     def get_robot_pose(self):
@@ -56,7 +62,6 @@ class GreedyPathFollowerAgent(habitat.Agent):
 
 
     def path_callback(self, msg):
-        print('Path received')
         self.mutex.acquire()
         self.path = []
         for pose in msg.poses:
@@ -68,13 +73,20 @@ class GreedyPathFollowerAgent(habitat.Agent):
         self.odom_pose = msg.pose.pose
 
 
+    def map_callback(self, msg):
+        self.map_update_time = rospy.Time.now().to_sec()
+
+
     def act(self, observations, env):
+        # if arrow keys pressed, give control to keyboard
         if keyboard.is_pressed('left'):
             return HabitatSimActions.TURN_LEFT
         if keyboard.is_pressed('right'):
             return HabitatSimActions.TURN_RIGHT
         if keyboard.is_pressed('up'):
             return HabitatSimActions.MOVE_FORWARD
+
+        # find nearest point of path to robot position
         robot_x, robot_y, robot_angle = self.get_robot_pose()
         self.mutex.acquire()
         if len(self.path) < 2 or robot_x is None:
@@ -88,12 +100,31 @@ class GreedyPathFollowerAgent(habitat.Agent):
             if dst < best_distance:
                 best_distance = dst
                 nearest_id = i
+        x, y = self.path[min(nearest_id + 1, len(self.path) - 1)]
         goal_x, goal_y = self.path[min(nearest_id + 1, len(self.path) - 1)]
         self.mutex.release()
+        dst = np.sqrt((robot_x - x) ** 2 + (robot_y - y) ** 2)
         angle_to_goal = np.arctan2(goal_y - robot_y, goal_x - robot_x)
         turn_angle = normalize(angle_to_goal - robot_angle)
+
+        # if SLAM isn't updated, let's wait
+        cur_time = rospy.Time.now().to_sec()
+        if cur_time - self.map_update_time > self.update_timeout:
+            return HabitatSimActions.STOP
+
+        # if we reached goal, stop
+        if dst < self.goal_radius and nearest_id + 1 >= len(self.path) - 1:
+            return HabitatSimActions.STOP
+
+        # if next path point is too close to us, move forward to avoid "swing"
+        if dst < 0.2 and abs(turn_angle) < np.pi / 3:
+            return HabitatSimActions.MOVE_FORWARD
+
+        # if our direction is close to direction to goal, move forward
         if abs(turn_angle) < self.max_d_angle:
             return HabitatSimActions.MOVE_FORWARD
+
+        # if direction isn't close, turn left or right
         if turn_angle < 0:
             return HabitatSimActions.TURN_RIGHT
         return HabitatSimActions.TURN_LEFT

@@ -12,6 +12,8 @@ from publishers import HabitatObservationPublisher
 
 DEFAULT_RATE = 30
 DEFAULT_AGENT_TYPE = 'keyboard'
+DEFAULT_GOAL_RADIUS = 0.25
+DEFAULT_MAX_ANGLE = 0.1
 
 
 def main():
@@ -20,6 +22,8 @@ def main():
     task_config = rospy.get_param('~task_config')
     rate_value = rospy.get_param('~rate', DEFAULT_RATE)
     agent_type = rospy.get_param('~agent_type', DEFAULT_AGENT_TYPE)
+    goal_radius = rospy.get_param('~goal_radius', DEFAULT_GOAL_RADIUS)
+    max_d_angle = rospy.get_param('~max_d_angle', DEFAULT_MAX_ANGLE)
     rgb_topic = rospy.get_param('~rgb_topic', None)
     depth_topic = rospy.get_param('~depth_topic', None)
     camera_info_topic = rospy.get_param('~camera_info_topic', None)
@@ -50,10 +54,9 @@ def main():
     if agent_type == 'keyboard':
        agent = KeyboardAgent()
     elif agent_type == 'shortest_path_follower':
-        goal_radius = 0.25
         agent = ShortestPathFollowerAgent(env, goal_radius)
     elif agent_type == 'greedy_path_follower':
-        agent = GreedyPathFollowerAgent()
+        agent = GreedyPathFollowerAgent(goal_radius, max_d_angle)
     else:
         print('AGENT TYPE {} IS NOT DEFINED!!!'.format(agent_type))
         return
