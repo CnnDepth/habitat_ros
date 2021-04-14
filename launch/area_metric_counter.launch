@@ -1,0 +1,5 @@
+<launch>
+<node pkg="habitat_ros" type="metric_counter.py" name="metric_counter" output="screen">
+  <param name="map_topic" value="proj_map"/>
+</node>
+</launch>

@@ -59,7 +59,6 @@ def cmd_callback(msg):
             while i > 0 and odometry[i][-1] > cur_time - stuck_time:
                 i -= 1
             dst = np.sqrt((odometry[-1][0] - odometry[i][0]) ** 2 + (odometry[-1][1] - odometry[i][1]) ** 2)
-            print(dst)
             if len(odometry) - i > 2 and dst < odom_threshold:
                 print('YOU STUCK!!! DRAW OBSTACLE AHEAD!!!')
                 alarm_publisher.publish(True)

@@ -19,6 +19,7 @@ DEFAULT_MAX_ANGLE = 0.1
 def main():
     # Initialize ROS node and take arguments
     rospy.init_node('habitat_ros_node')
+    node_start_time = rospy.Time.now().to_sec()
     task_config = rospy.get_param('~task_config')
     rate_value = rospy.get_param('~rate', DEFAULT_RATE)
     agent_type = rospy.get_param('~agent_type', DEFAULT_AGENT_TYPE)
@@ -44,8 +45,8 @@ def main():
     config.TASK.AGENT_POSITION_SENSOR.TYPE = "position_sensor"
     config.TASK.AGENT_POSITION_SENSOR.ANSWER_TO_LIFE = 42
     config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
-    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-    config.TASK.SENSORS.append("HEADING_SENSOR")
+    #config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+    #config.TASK.SENSORS.append("HEADING_SENSOR")
     config.freeze()
 
     # Initialize the agent and environment
@@ -65,6 +66,8 @@ def main():
     observations = env.reset()
     print(env.current_episode)
     env.step(HabitatSimActions.MOVE_FORWARD)
+    robot_start_time = rospy.Time.now().to_sec()
+    print('TIME TO LAUNCH HABITAT:', robot_start_time - node_start_time)
     while not rospy.is_shutdown():
         publisher.publish(observations)
         action = agent.act(observations, env)
