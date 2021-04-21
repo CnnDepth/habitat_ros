@@ -7,6 +7,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from keyboard_agent import KeyboardAgent
 from shortest_path_follower_agent import ShortestPathFollowerAgent
 from greedy_path_follower_agent import GreedyPathFollowerAgent
+from random_movement_agent import RandomMovementAgent
 from custom_sensors import AgentPositionSensor
 from publishers import HabitatObservationPublisher
 
@@ -58,6 +59,8 @@ def main():
         agent = ShortestPathFollowerAgent(env, goal_radius)
     elif agent_type == 'greedy_path_follower':
         agent = GreedyPathFollowerAgent(goal_radius, max_d_angle)
+    elif agent_type == 'random_movement':
+        agent = RandomMovementAgent()
     else:
         print('AGENT TYPE {} IS NOT DEFINED!!!'.format(agent_type))
         return

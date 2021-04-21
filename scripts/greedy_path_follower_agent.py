@@ -6,6 +6,7 @@ import keyboard
 from nav_msgs.msg import Path, Odometry, OccupancyGrid
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from threading import Lock
+from collections import deque
 
 
 DEFAULT_TIMEOUT_VALUE = 2
@@ -24,15 +25,20 @@ class GreedyPathFollowerAgent(habitat.Agent):
     def __init__(self, goal_radius=0.25, max_d_angle=0.1):
         self.path_subscriber = rospy.Subscriber('/path', Path, self.path_callback)
         self.odom_subscriber = rospy.Subscriber('/odom', Odometry, self.odom_callback)
-        self.map_subscriber = rospy.Subscriber('/projmap_resized', OccupancyGrid, self.map_callback)
+        self.map_subscriber = rospy.Subscriber('/proj_map', OccupancyGrid, self.map_callback)
         self.tf_listener = tf.TransformListener()
-        self.path = []
+        self.path = None
         self.odom_pose = None
         self.goal_radius = goal_radius
         self.max_d_angle = max_d_angle
         self.mutex = Lock()
         self.map_update_time = 0
         self.update_timeout = DEFAULT_TIMEOUT_VALUE
+        self.start_time = 0
+        self.slam_lost = False
+        self.slam_lost_time = 0
+        self.path_update_time = 0
+        self.odom_track = deque([], maxlen=20)
 
 
     def get_robot_pose(self):
@@ -71,10 +77,13 @@ class GreedyPathFollowerAgent(habitat.Agent):
 
     def odom_callback(self, msg):
         self.odom_pose = msg.pose.pose
+        self.odom_track.append([self.odom_pose.position.x, self.odom_pose.position.y])
 
 
     def map_callback(self, msg):
         self.map_update_time = rospy.Time.now().to_sec()
+        if self.start_time == 0:
+            self.start_time = rospy.Time.now().to_sec()
 
 
     def act(self, observations, env):
@@ -86,10 +95,53 @@ class GreedyPathFollowerAgent(habitat.Agent):
         if keyboard.is_pressed('up'):
             return HabitatSimActions.MOVE_FORWARD
 
+        cur_time = rospy.Time.now().to_sec()
+        # at start, let's rotate 360 degrees to look around
+        if cur_time - self.start_time < 12:
+            return HabitatSimActions.TURN_LEFT
+
+        # if SLAM is lost, let's try to restore it - rotate 180, move forward, and rotate 180 again
+        if self.odom_pose is not None:
+            odom_x, odom_y = self.odom_pose.position.x, self.odom_pose.position.y
+            eps = 0.1
+            std_threshold = 0.5
+            if np.std(np.array(list(self.odom_track)), axis=0).max() > std_threshold or \
+               (np.abs(odom_x) < eps and np.abs(odom_y) < eps and cur_time - self.map_update_time > self.update_timeout):
+                rospy.logwarn('SLAM lost!')
+                if not self.slam_lost:
+                    self.slam_lost_time = cur_time
+                self.slam_lost = True
+            elif cur_time - self.slam_lost_time >= 6:
+                self.slam_lost = False
+            if self.slam_lost:
+                if cur_time - self.slam_lost_time < 6:
+                    return HabitatSimActions.TURN_LEFT
+                if cur_time - self.slam_lost_time < 7.5:
+                    return HabitatSimActions.MOVE_FORWARD
+                if cur_time - self.slam_lost_time < 13.5:
+                    return HabitatSimActions.TURN_LEFT
+                if cur_time - self.slam_lost_time < 15:
+                    return HabitatSimActions.MOVE_FORWARD
+                if cur_time - self.slam_lost_time > 15:
+                    self.slam_lost_time = cur_time
+
+        # if we receive empty paths for long time, let's try to move somewhere
+        """
+        if self.path == []:
+            if cur_time - self.path_update_time > self.update_timeout:
+                rospy.logwarn('No path received!')
+                n_seconds_from_lost = int(cur_time - self.path_update_time)
+                if n_seconds_from_lost % 2 == 0:
+                    return HabitatSimActions.TURN_LEFT
+                return HabitatSimActions.MOVE_FORWARD
+        else:
+            self.path_update_time = cur_time
+        """
+
         # find nearest point of path to robot position
         robot_x, robot_y, robot_angle = self.get_robot_pose()
         self.mutex.acquire()
-        if len(self.path) < 2 or robot_x is None:
+        if self.path is None or len(self.path) < 2 or robot_x is None:
             self.mutex.release()
             return HabitatSimActions.STOP
         nearest_id = 0
@@ -107,8 +159,8 @@ class GreedyPathFollowerAgent(habitat.Agent):
         angle_to_goal = np.arctan2(goal_y - robot_y, goal_x - robot_x)
         turn_angle = normalize(angle_to_goal - robot_angle)
 
-        # if SLAM isn't updated, let's wait
         cur_time = rospy.Time.now().to_sec()
+        # if SLAM isn't updated, let's wait
         if cur_time - self.map_update_time > self.update_timeout:
             return HabitatSimActions.STOP
 

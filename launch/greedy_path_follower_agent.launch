@@ -2,7 +2,7 @@
 <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
   <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_gibson_auto.yaml"/>
   <param name="agent_type" value="greedy_path_follower"/>
-  <param name="goal_radius" value="0.5"/>
+  <param name="goal_radius" value="0.15"/>
   <param name="max_d_angle" value="0.25"/>
   <param name="rgb_topic" value="/habitat/rgb/image"/>
   <param name="depth_topic" value="/habitat/depth/image"/>
