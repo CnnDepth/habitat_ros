@@ -43,6 +43,7 @@ class GreedyPathFollowerAgent(habitat.Agent):
         self.path_update_time = 0
         self.odom_track = []
         self.stuck = False
+        self.steps_after_stuck = 1000
 
 
     def reset(self):
@@ -168,7 +169,10 @@ class GreedyPathFollowerAgent(habitat.Agent):
         """
 
         # find nearest point of path to robot position
-        robot_x, robot_y, robot_angle = self.get_robot_pose()
+        #robot_x, robot_y, robot_angle = self.get_robot_pose()
+        robot_x, robot_y = observations['gps']
+        robot_y = -robot_y
+        robot_angle = observations['compass'][0]
         self.mutex.acquire()
         if self.path is None or len(self.path) < 2 or robot_x is None:
             self.mutex.release()
@@ -178,6 +182,9 @@ class GreedyPathFollowerAgent(habitat.Agent):
             return np.random.choice([HabitatSimActions.TURN_LEFT, HabitatSimActions.MOVE_FORWARD])
         nearest_id = 0
         best_distance = np.inf
+        self.steps_after_stuck += 1
+        if self.stuck:
+            self.steps_after_stuck = 0
         for i in range(len(self.path)):
             x, y = self.path[i]
             dst = np.sqrt((robot_x - x) ** 2 + (robot_y - y) ** 2)
@@ -188,9 +195,10 @@ class GreedyPathFollowerAgent(habitat.Agent):
         x_prev, y_prev = self.path[min(nearest_id, len(self.path) - 1)]
         segment = np.sqrt((x_prev - x) ** 2 + (y_prev - y) ** 2)
         dst = np.sqrt((robot_x - x) ** 2 + (robot_y - y) ** 2)
-        #if segment < 0.2 and nearest_id + 2 < len(self.path):
-        #    nearest_id += 1
-        #    x, y = self.path[min(nearest_id + 1, len(self.path) - 1)]
+        if (segment < 0.2 or dst < 0.2) and self.steps_after_stuck > 2 and nearest_id + 2 < len(self.path):
+            #print('TAKE NEXT POINT OF PATH')
+            nearest_id += 1
+            x, y = self.path[min(nearest_id + 1, len(self.path) - 1)]
         self.mutex.release()
         dst = np.sqrt((robot_x - x) ** 2 + (robot_y - y) ** 2)
         angle_to_goal = np.arctan2(y - robot_y, x - robot_x)
@@ -201,11 +209,11 @@ class GreedyPathFollowerAgent(habitat.Agent):
         #print(cur_time - self.map_update_time)
         #if cur_time - self.map_update_time > self.update_timeout:
         #    return HabitatSimActions.STOP
-        print(dst, turn_angle)
+        #print(dst, turn_angle)
 
         # if we reached goal, stop
         if dst < self.goal_radius and nearest_id + 1 >= len(self.path) - 1:
-            print('GOAL REACHED. STAY ON PLACE')
+            #print('GOAL REACHED. STAY ON PLACE')
             #return HabitatSimActions.STOP
             return np.random.choice([HabitatSimActions.TURN_LEFT, HabitatSimActions.MOVE_FORWARD])
 
