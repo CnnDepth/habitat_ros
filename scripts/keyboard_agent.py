@@ -27,6 +27,7 @@ class KeyboardAgent(habitat.Agent):
         if keyboard.is_pressed('d'):
             self.twist = max(self.twist - 0.2, 0)
         return keyboard_commands
+        #return [HabitatSimActions.MOVE_FORWARD]
 
     def act(self, observations, env):
         # receive command from keyboard and move

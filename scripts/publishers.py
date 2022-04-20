@@ -3,7 +3,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Pose, PoseStamped
 from cv_bridge import CvBridge
 import yaml
-import transformations as tf
+import tf
 import numpy as np
 
 MAX_DEPTH = 10
@@ -44,7 +44,6 @@ class HabitatObservationPublisher:
             self.publish_rgb = True
             self.image_publisher = rospy.Publisher(rgb_topic, Image, latch=True, queue_size=100)
             self.image = Image()
-            self.image.encoding='rgb8'
             self.image.is_bigendian = False
         else:
             self.publish_rgb = False
@@ -54,7 +53,6 @@ class HabitatObservationPublisher:
             self.publish_depth = True
             self.depth_publisher = rospy.Publisher(depth_topic, Image, latch=True, queue_size=100)
             self.depth = Image()
-            self.depth.encoding = 'mono8'
             self.depth.is_bigendian = True
         else:
             self.publish_depth = False
@@ -63,6 +61,7 @@ class HabitatObservationPublisher:
         if true_pose_topic is not None:
             self.publish_true_pose = True
             self.pose_publisher = rospy.Publisher(true_pose_topic, PoseStamped, latch=True, queue_size=100)
+            self.tfbr = tf.TransformBroadcaster()
         else:
             self.publish_true_pose = False
 
@@ -80,7 +79,10 @@ class HabitatObservationPublisher:
 
         # Publish depth image
         if self.publish_depth:
-            self.depth = self.cvbridge.cv2_to_imgmsg(observations['depth'] * MAX_DEPTH)
+            depth = observations['depth'] * 10000
+            depth = depth.astype(np.uint16)
+            #print(depth.min(), depth.max())
+            self.depth = self.cvbridge.cv2_to_imgmsg(depth)
             self.depth.header.stamp = cur_time
             self.depth.header.frame_id = 'base_scan'
             self.depth_publisher.publish(self.depth)
@@ -92,6 +94,7 @@ class HabitatObservationPublisher:
 
         # Publish true pose
         if self.publish_true_pose:
+            """
             position, rotation = observations['agent_position']
             y, z, x = position
             cur_orientation = rotation
@@ -105,4 +108,25 @@ class HabitatObservationPublisher:
             cur_pose.pose.position.y = y
             cur_pose.pose.position.z = z
             cur_pose.pose.orientation.w, cur_pose.pose.orientation.x, cur_pose.pose.orientation.y, cur_pose.pose.orientation.z = tf.quaternion_from_euler(0, 0, cur_z_angle)
+            """
+            x, y = observations['gps']
+            cur_z_angle = observations['compass'][0]
+            cur_pose = PoseStamped()
+            cur_pose.header.stamp = cur_time
+            cur_pose.header.frame_id = 'map'
+            cur_pose.pose.position.x = x
+            cur_pose.pose.position.y = -y
+            cur_pose.pose.position.z = 0
+            cur_pose.pose.orientation.x, \
+            cur_pose.pose.orientation.y, \
+            cur_pose.pose.orientation.z, \
+            cur_pose.pose.orientation.w = tf.transformations.quaternion_from_euler(0, 0, cur_z_angle)
+            self.tfbr.sendTransform((x, -y, 0),
+                                    tf.transformations.quaternion_from_euler(0, 0, cur_z_angle),
+                                    cur_time,
+                                    'base_link', 'odom')
+            self.tfbr.sendTransform((0, 0, 0),
+                                    tf.transformations.quaternion_from_euler(0, 0, 0),
+                                    cur_time,
+                                    'odom', 'map')
             self.pose_publisher.publish(cur_pose)

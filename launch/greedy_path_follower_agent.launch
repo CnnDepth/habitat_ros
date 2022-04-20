@@ -1,18 +1,20 @@
 <launch>
 <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
-  <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_gibson_auto.yaml"/>
+  <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/objectnav_hm3d.yaml"/>
+  <!-- param name="task_config" value="/home/kirill/catkin_ws/src/habitat_ros/ddppo_objectnav.yaml"/ -->
+  <param name="rate" value="2.5"/>
   <param name="agent_type" value="greedy_path_follower"/>
-  <param name="goal_radius" value="0.15"/>
-  <param name="max_d_angle" value="0.25"/>
   <param name="rgb_topic" value="/habitat/rgb/image"/>
   <param name="depth_topic" value="/habitat/depth/image"/>
   <param name="camera_info_topic" value="/habitat/rgb/camera_info"/>
   <param name="true_pose_topic" value="/true_pose"/>
+  <param name="max_d_angle" value="0.4"/>
+  <param name="goal_radius" value="0.2"/>
   <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib.yaml"/>
 </node>
 
 <node pkg="habitat_ros" type="stuck_detection.py" name="stuck_detector">
   <param name="odometry_threshold" value="0.1"/>
-  <param name="stuck_time" value="1"/>
+  <param name="stuck_time" value="0.6"/>
 </node>
 </launch>
