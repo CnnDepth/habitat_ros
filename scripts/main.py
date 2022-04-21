@@ -90,7 +90,7 @@ class HabitatRunner():
         self.fake_finishes = 0
 
         self.mapper = Mapper(self.env)
-        self.semantic_predictor = SemanticPredictor(threshold=0.3)
+        self.semantic_predictor = SemanticPredictor(threshold=0.35)
         if agent_type == 'keyboard':
            self.agent = KeyboardAgent()
         elif agent_type == 'shortest_path_follower':
@@ -128,7 +128,6 @@ class HabitatRunner():
             step_start_time = rospy.Time.now()
             self.publisher.publish(observations)
             action = self.agent.act(observations, self.env)
-            print('Action:', action)
             action_msg = Int32()
             action_msg.data = action
             self.action_publisher.publish(action_msg)
