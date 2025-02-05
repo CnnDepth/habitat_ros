@@ -1,7 +1,7 @@
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Pose, PoseStamped, TransformStamped
-from semantic_predictor_segformer_multicat import SemanticPredictor
+#from semantic_predictor_segformer_multicat import SemanticPredictor
 from cv_bridge import CvBridge
 import yaml
 import tf
@@ -99,64 +99,64 @@ class HabitatObservationPublisher:
             self.image = self.cvbridge.cv2_to_imgmsg(observations['rgb1'])
             self.image.encoding = 'rgb8'
             self.image.header.stamp = cur_time
-            self.image.header.frame_id = 'camera_link1'
+            self.image.header.frame_id = 'camera_link1_noised'
             self.image_publisher1.publish(self.image)
 
             self.image = self.cvbridge.cv2_to_imgmsg(observations['rgb2'])
             self.image.encoding = 'rgb8'
             self.image.header.stamp = cur_time
-            self.image.header.frame_id = 'camera_link2'
+            self.image.header.frame_id = 'camera_link2_noised'
             self.image_publisher2.publish(self.image)
 
             self.image = self.cvbridge.cv2_to_imgmsg(observations['rgb3'])
             self.image.encoding = 'rgb8'
             self.image.header.stamp = cur_time
-            self.image.header.frame_id = 'camera_link3'
+            self.image.header.frame_id = 'camera_link3_noised'
             self.image_publisher3.publish(self.image)
 
             self.image = self.cvbridge.cv2_to_imgmsg(observations['rgb4'])
             self.image.encoding = 'rgb8'
             self.image.header.stamp = cur_time
-            self.image.header.frame_id = 'camera_link4'
+            self.image.header.frame_id = 'camera_link4_noised'
             self.image_publisher4.publish(self.image)
 
         # Publish depth image
         if self.publish_depth:
-            depth = observations['depth1'] * 7500 + 500
+            depth = observations['depth1'] * 7800 + 200
             #depth = observations['depth'] * 10000
             depth = depth.astype(np.uint16)
             depth[depth == 8000] = 0
-            depth[depth == 500] = 0
+            depth[depth == 200] = 0
             self.depth = self.cvbridge.cv2_to_imgmsg(depth)
             self.depth.header.stamp = cur_time
             self.depth.header.frame_id = 'camera_link1'
             self.depth_publisher1.publish(self.depth)
 
-            depth = observations['depth2'] * 7500 + 500
+            depth = observations['depth2'] * 7800 + 200
             #depth = observations['depth'] * 10000
             depth = depth.astype(np.uint16)
             depth[depth == 8000] = 0
-            depth[depth == 500] = 0
+            depth[depth == 200] = 0
             self.depth = self.cvbridge.cv2_to_imgmsg(depth)
             self.depth.header.stamp = cur_time
             self.depth.header.frame_id = 'camera_link2'
             self.depth_publisher2.publish(self.depth)
 
-            depth = observations['depth3'] * 7500 + 500
+            depth = observations['depth3'] * 7800 + 200
             #depth = observations['depth'] * 10000
             depth = depth.astype(np.uint16)
             depth[depth == 8000] = 0
-            depth[depth == 500] = 0
+            depth[depth == 200] = 0
             self.depth = self.cvbridge.cv2_to_imgmsg(depth)
             self.depth.header.stamp = cur_time
             self.depth.header.frame_id = 'camera_link3'
             self.depth_publisher3.publish(self.depth)
 
-            depth = observations['depth4'] * 7500 + 500
+            depth = observations['depth4'] * 7800 + 200
             #depth = observations['depth'] * 10000
             depth = depth.astype(np.uint16)
             depth[depth == 8000] = 0
-            depth[depth == 500] = 0
+            depth[depth == 200] = 0
             self.depth = self.cvbridge.cv2_to_imgmsg(depth)
             self.depth.header.stamp = cur_time
             self.depth.header.frame_id = 'camera_link4'

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+  <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
+    <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_360.yaml"/>
+    <param name="rate" value="15"/>
+    <param name="agent_type" value="shortest_path_follower"/>
+    <param name="rgb_topic" value="/habitat/rgb/image"/>
+    <param name="depth_topic" value="/habitat/depth/image"/>
+    <param name="camera_info_topic" value="/habitat/rgb/camera_info"/>
+    <param name="true_pose_topic" value="/true_pose"/>
+    <param name="max_d_angle" value="0.4"/>
+    <param name="goal_radius" value="0.5"/>
+    <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib_360.yaml"/>
+  </node>
+
+  <!-- Nodelet manager for this pipeline -->
+  <node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+
+
+  <!-- Convert to point cloud -->
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud1" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
+    <param name="filter_resolution" value="0.05"/>
+    <param name="exact_sync" value="false"/>
+    
+    <!-- Input: RGB image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="rgb/image_rect_color" to="/habitat/rgb1/image"/>
+
+    <!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+    <remap from="rgb/camera_info" to="/habitat/rgb/camera_info"/>
+
+    <!-- Input: Rectified depth image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="depth_registered/image_rect" to="/habitat/depth1/image"/>
+
+    <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
+    <remap from="depth_registered/points" to="/habitat/points1"/>
+  </node>
+  
+  <!-- Convert to point cloud -->
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud2" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
+    <param name="filter_resolution" value="0.05"/>
+    <param name="exact_sync" value="false"/>
+    
+    <!-- Input: RGB image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="rgb/image_rect_color" to="/habitat/rgb2/image"/>
+
+    <!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+    <remap from="rgb/camera_info" to="/habitat/rgb/camera_info"/>
+
+    <!-- Input: Rectified depth image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="depth_registered/image_rect" to="/habitat/depth2/image"/>
+
+    <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
+    <remap from="depth_registered/points" to="/habitat/points2"/>
+  </node>
+  
+  <!-- Convert to point cloud -->
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud3" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
+    <param name="filter_resolution" value="0.05"/>
+    <param name="exact_sync" value="false"/>
+    
+    <!-- Input: RGB image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="rgb/image_rect_color" to="/habitat/rgb3/image"/>
+
+    <!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+    <remap from="rgb/camera_info" to="/habitat/rgb/camera_info"/>
+
+    <!-- Input: Rectified depth image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="depth_registered/image_rect" to="/habitat/depth3/image"/>
+
+    <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
+    <remap from="depth_registered/points" to="/habitat/points3"/>
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera" args="0 0 0.88 -1.5707963267948966 0 -1.5707963267948966 base_link camera_link 100">
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera1" args="0 0 0.88 -1.5707963267948966 0 -1.5707963267948966 base_link camera_link1 100">
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera2" args="0 0 0.88 0.5236 0 -1.5707963267948966 base_link camera_link2 100">
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera3" args="0 0 0.88  -3.6652 0 -1.5707963267948966 base_link camera_link3 100">
+  </node>
+
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 0 0 0 base_link base_scan 100">
+  </node>
+  
+  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher">
+  </node>
+  
+  <node pkg="depth_image_proc" type="merge_point_clouds.py" name="merge_point_clouds">
+    <param name="output_frame_id" value="camera_link"/>
+  </node>
+</launch>

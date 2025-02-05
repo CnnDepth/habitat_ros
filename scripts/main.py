@@ -1,5 +1,8 @@
 #! /usr/bin/env python
 
+import numpy as np
+np.float = np.float64
+
 import rospy
 import habitat
 #from habitat_map.env_orb import Env
@@ -7,6 +10,7 @@ import habitat
 #from semantic_predictor_segformer import SemanticPredictor
 from std_msgs.msg import Int32
 from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -22,7 +26,6 @@ from habitat_map.utils import draw_top_down_map
 from skimage.io import imsave
 from tqdm import tqdm
 from habitat_map import env_orb
-import numpy as np
 from cv_bridge import CvBridge
 from PIL import Image
 import cv2
@@ -67,6 +70,7 @@ class HabitatRunner():
         self.map_publisher = rospy.Publisher('habitat/map', OccupancyGrid, latch=True, queue_size=100)
         #self.semantic_map_publisher = rospy.Publisher('habitat/semantic_map', OccupancyGrid, latch=True, queue_size=100)
         self.reset_publisher = rospy.Publisher('/reset_exploration', String, latch=True, queue_size=100)
+        self.robot_pose_publisher = rospy.Publisher('/robot_pose_in_habitat_coords', PoseStamped, latch=True, queue_size=100)
 
         # Now define the config for the sensor
         habitat_path = '/home/kirill/habitat-lab/data'
@@ -97,7 +101,8 @@ class HabitatRunner():
         self.mapper = Mapper()
         #self.semantic_predictor = SemanticPredictor(threshold=0.35)
         goal_positions = np.loadtxt('/home/kirill/catkin_ws/src/habitat_ros/goal_positions/mp3d/{}.txt'.format(scene_name))
-        #goal_positions = np.loadtxt('/home/kirill/catkin_ws/src/habitat_ros/goal_positions_300m.txt')
+        #goal_positions = np.loadtxt('/home/kirill/catkin_ws/src/habitat_ros/goal_positions/mipt.txt')
+        #goal_positions = None
         if agent_type == 'keyboard':
            self.agent = KeyboardAgent()
         elif agent_type == 'shortest_path_follower':

@@ -3,7 +3,7 @@
   <arg name="scene_name" default="2n8kARJN3HM"/>
   <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_4x90_$(arg scene_name).yaml"/>
 
-  <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
+  <node pkg="habitat_ros" type="main.py" name="habitat_agent">
     <param name="task_config" value="$(arg config_path)"/>
     <param name="rate" value="15"/>
     <param name="agent_type" value="shortest_path_follower"/>
@@ -18,9 +18,9 @@
   </node>
 
   <!-- Nodelet manager for this pipeline -->
-  <node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+  <node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet"/>
   
-  <node name="update_frame_id_1" pkg="depth_image_proc" type="update_frame_id.py" output="screen">
+  <node name="update_frame_id_1" pkg="depth_image_proc" type="update_frame_id.py">
     <remap from="/habitat/rgb/image" to="/habitat/rgb1/image"/>
     <remap from="/habitat/depth/image" to="/habitat/depth1/image"/>
     <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color1"/>
@@ -28,7 +28,7 @@
     <param name="camera_frame_id" value="camera_link1_noised"/>
   </node>
 
-  <node name="update_frame_id_2" pkg="depth_image_proc" type="update_frame_id.py" output="screen">
+  <node name="update_frame_id_2" pkg="depth_image_proc" type="update_frame_id.py">
     <remap from="/habitat/rgb/image" to="/habitat/rgb2/image"/>
     <remap from="/habitat/depth/image" to="/habitat/depth2/image"/>
     <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color2"/>
@@ -36,7 +36,7 @@
     <param name="camera_frame_id" value="camera_link2_noised"/>
   </node>
 
-  <node name="update_frame_id_3" pkg="depth_image_proc" type="update_frame_id.py" output="screen">
+  <node name="update_frame_id_3" pkg="depth_image_proc" type="update_frame_id.py">
     <remap from="/habitat/rgb/image" to="/habitat/rgb3/image"/>
     <remap from="/habitat/depth/image" to="/habitat/depth3/image"/>
     <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color3"/>
@@ -44,7 +44,7 @@
     <param name="camera_frame_id" value="camera_link3_noised"/>
   </node>
 
-  <node name="update_frame_id_4" pkg="depth_image_proc" type="update_frame_id.py" output="screen">
+  <node name="update_frame_id_4" pkg="depth_image_proc" type="update_frame_id.py">
     <remap from="/habitat/rgb/image" to="/habitat/rgb4/image"/>
     <remap from="/habitat/depth/image" to="/habitat/depth4/image"/>
     <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color4"/>
@@ -53,7 +53,7 @@
   </node>
 
   <!-- Convert to point cloud -->
-  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud1" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud1" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
     <param name="filter_resolution" value="0.05"/>
     <param name="exact_sync" value="false"/>
     
@@ -71,7 +71,7 @@
   </node>
   
   <!-- Convert to point cloud -->
-  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud2" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud2" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
     <param name="filter_resolution" value="0.05"/>
     <param name="exact_sync" value="false"/>
     
@@ -89,7 +89,7 @@
   </node>
   
   <!-- Convert to point cloud -->
-  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud3" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud3" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
     <param name="filter_resolution" value="0.05"/>
     <param name="exact_sync" value="false"/>
     
@@ -107,7 +107,7 @@
   </node>
 
   <!-- Convert to point cloud -->
-  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud4" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud4" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond">
     <param name="filter_resolution" value="0.05"/>
     <param name="exact_sync" value="false"/>
     
@@ -139,10 +139,10 @@
   <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 0 0 0 base_link_noised base_scan_noised 100">
   </node>
   
-  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher" output="screen">
+  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher">
   </node>
   
-  <node pkg="depth_image_proc" type="merge_point_clouds4.py" name="merge_point_clouds" output="screen">
+  <node pkg="depth_image_proc" type="merge_point_clouds4.py" name="merge_point_clouds">
     <param name="output_frame_id" value="camera_link_noised"/>
   </node>
   
@@ -150,12 +150,12 @@
   </node -->
 
   <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
-    <!-- param name="x_std" value="0.0075"/>
+    <param name="x_std" value="0.001"/>
     <param name="y_std" value="0.000"/>
-    <param name="theta_std" value="0.015"/ -->
-    <param name="x_std" value="0.0"/>
+    <param name="theta_std" value="0.002"/>
+    <!-- param name="x_std" value="0.0"/>
     <param name="y_std" value="0.0"/>
-    <param name="theta_std" value="0.0"/>
-    <param name="noise_update_interval" value="10.0"/>
+    <param name="theta_std" value="0.0"/ -->
+    <param name="noise_update_interval" value="1.0"/>
   </node>
 </launch>

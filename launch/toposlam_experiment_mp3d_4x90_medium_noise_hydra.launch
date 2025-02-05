@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
+  <arg name="semantic_map_dir" default="$(find kimera_semantics_ros)/cfg"/>
+  <arg name="semantic_map_file" default="habitat_mipt_segmentation_mapping.csv"/>
+  <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"/>
   <arg name="scene_name" default="2n8kARJN3HM"/>
   <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_4x90_$(arg scene_name).yaml"/>
 
@@ -9,12 +12,19 @@
     <param name="agent_type" value="shortest_path_follower"/>
     <param name="rgb_topic" value="/habitat/rgb/image"/>
     <param name="depth_topic" value="/habitat/depth/image"/>
+    <param name="semantic_topic" value="/semantic_mask"/>
     <param name="camera_info_topic" value="/habitat/rgb/camera_info"/>
     <param name="true_pose_topic" value="/true_pose"/>
     <param name="max_d_angle" value="0.4"/>
     <param name="goal_radius" value="0.5"/>
     <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib_4x90.yaml"/>
+    <param name="semantic_config_path" value="$(arg semantic_map_path)"/>
     <param name="scene_name" value="$(arg scene_name)"/>
+  </node>
+
+  <node pkg="semantic_mapper" type="semantic_mask_publisher_triple.py" name="semantic_mask_publisher" output="screen">
+    <param name="config_path" value="$(arg semantic_map_path)"/>
+    <param name="timeout" value="1.0"/>
   </node>
 
   <!-- Nodelet manager for this pipeline -->
@@ -139,23 +149,23 @@
   <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 0 0 0 base_link_noised base_scan_noised 100">
   </node>
   
-  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher" output="screen">
-  </node>
+  <!-- node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher" output="screen">
+  </node -->
   
   <node pkg="depth_image_proc" type="merge_point_clouds4.py" name="merge_point_clouds" output="screen">
     <param name="output_frame_id" value="camera_link_noised"/>
   </node>
   
-  <!-- node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
-  </node -->
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
+  </node>
 
   <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
-    <!-- param name="x_std" value="0.0075"/>
+    <param name="x_std" value="0.001"/>
     <param name="y_std" value="0.000"/>
-    <param name="theta_std" value="0.015"/ -->
-    <param name="x_std" value="0.0"/>
+    <param name="theta_std" value="0.002"/>
+    <!-- param name="x_std" value="0.0"/>
     <param name="y_std" value="0.0"/>
-    <param name="theta_std" value="0.0"/>
-    <param name="noise_update_interval" value="10.0"/>
+    <param name="theta_std" value="0.0"/ -->
+    <param name="noise_update_interval" value="1.0"/>
   </node>
 </launch>

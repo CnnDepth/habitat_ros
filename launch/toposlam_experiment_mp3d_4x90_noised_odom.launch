@@ -149,13 +149,13 @@
   <!-- node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
   </node -->
 
-  <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
-    <!-- param name="x_std" value="0.0075"/>
+  <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser" output="screen">
+    <param name="x_std" value="0.0075"/>
     <param name="y_std" value="0.000"/>
-    <param name="theta_std" value="0.015"/ -->
-    <param name="x_std" value="0.0"/>
+    <param name="theta_std" value="0.015"/>
+    <!-- param name="x_std" value="0.0"/>
     <param name="y_std" value="0.0"/>
-    <param name="theta_std" value="0.0"/>
-    <param name="noise_update_interval" value="10.0"/>
+    <param name="theta_std" value="0.0"/ -->
+    <param name="noise_update_interval" value="1.0"/>
   </node>
 </launch>

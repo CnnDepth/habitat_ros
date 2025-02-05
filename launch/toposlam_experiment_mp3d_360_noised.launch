@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
   <arg name="scene_name" default="2n8kARJN3HM"/>
-  <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_4x90_$(arg scene_name).yaml"/>
+  <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_360_$(arg scene_name).yaml"/>
 
   <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
     <param name="task_config" value="$(arg config_path)"/>
@@ -13,7 +13,7 @@
     <param name="true_pose_topic" value="/true_pose"/>
     <param name="max_d_angle" value="0.4"/>
     <param name="goal_radius" value="0.5"/>
-    <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib_4x90.yaml"/>
+    <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib_360.yaml"/>
     <param name="scene_name" value="$(arg scene_name)"/>
   </node>
 
@@ -42,14 +42,6 @@
     <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color3"/>
     <remap from="/depth_registered/image_rect" to="/depth_registered/image_rect3"/>
     <param name="camera_frame_id" value="camera_link3_noised"/>
-  </node>
-
-  <node name="update_frame_id_4" pkg="depth_image_proc" type="update_frame_id.py" output="screen">
-    <remap from="/habitat/rgb/image" to="/habitat/rgb4/image"/>
-    <remap from="/habitat/depth/image" to="/habitat/depth4/image"/>
-    <remap from="/rgb/image_rect_color" to="/rgb/image_rect_color4"/>
-    <remap from="/depth_registered/image_rect" to="/depth_registered/image_rect4"/>
-    <param name="camera_frame_id" value="camera_link4_noised"/>
   </node>
 
   <!-- Convert to point cloud -->
@@ -105,24 +97,6 @@
     <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
     <remap from="depth_registered/points" to="/habitat/points3"/>
   </node>
-
-  <!-- Convert to point cloud -->
-  <node pkg="nodelet" type="nodelet" name="depth_image_proc_pointcloud4" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
-    <param name="filter_resolution" value="0.05"/>
-    <param name="exact_sync" value="false"/>
-    
-    <!-- Input: RGB image, registered to the RGB camera. (sensor_msgs/Image) -->
-    <remap from="rgb/image_rect_color" to="rgb/image_rect_color4"/>
-
-    <!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
-    <remap from="rgb/camera_info" to="/habitat/rgb/camera_info"/>
-
-    <!-- Input: Rectified depth image, registered to the RGB camera. (sensor_msgs/Image) -->
-    <remap from="depth_registered/image_rect" to="depth_registered/image_rect4"/>
-
-    <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
-    <remap from="depth_registered/points" to="/habitat/points4"/>
-  </node>
   
   <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera" args="0 0 0.88 -1.5707963267948966 0 -1.5707963267948966 base_link_noised camera_link_noised 100">
   </node>
@@ -142,12 +116,12 @@
   <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher" output="screen">
   </node>
   
-  <node pkg="depth_image_proc" type="merge_point_clouds4.py" name="merge_point_clouds" output="screen">
+  <node pkg="depth_image_proc" type="merge_point_clouds.py" name="merge_point_clouds" output="screen">
     <param name="output_frame_id" value="camera_link_noised"/>
   </node>
   
-  <!-- node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
-  </node -->
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
+  </node>
 
   <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
     <!-- param name="x_std" value="0.0075"/>

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
-  <arg name="scene_name" default="2n8kARJN3HM"/>
-  <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_4x90_$(arg scene_name).yaml"/>
+  <arg name="scene_name" default="MIPT"/>
+  <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mipt_4x90.yaml"/>
 
   <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
     <param name="task_config" value="$(arg config_path)"/>
-    <param name="rate" value="15"/>
+    <param name="rate" value="10"/>
     <param name="agent_type" value="shortest_path_follower"/>
     <param name="rgb_topic" value="/habitat/rgb/image"/>
     <param name="depth_topic" value="/habitat/depth/image"/>
@@ -146,16 +146,16 @@
     <param name="output_frame_id" value="camera_link_noised"/>
   </node>
   
-  <!-- node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
-  </node -->
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
+  </node>
 
   <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
-    <!-- param name="x_std" value="0.0075"/>
+    <param name="x_std" value="0.0075"/>
     <param name="y_std" value="0.000"/>
-    <param name="theta_std" value="0.015"/ -->
-    <param name="x_std" value="0.0"/>
+    <param name="theta_std" value="0.015"/>
+    <!-- param name="x_std" value="0.0"/>
     <param name="y_std" value="0.0"/>
-    <param name="theta_std" value="0.0"/>
+    <param name="theta_std" value="0.0"/ -->
     <param name="noise_update_interval" value="10.0"/>
   </node>
 </launch>

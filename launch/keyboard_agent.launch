@@ -1,6 +1,7 @@
 <launch>
 <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
-  <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_gibson.yaml"/>
+  <param name="task_config" value="/home/kirill/habitat-lab/configs/tasks/pointnav_mipt.yaml"/>
+  <param name="rate" value="30"/>
   <param name="agent_type" value="keyboard"/>
   <param name="rgb_topic" value="/habitat/rgb/image"/>
   <param name="depth_topic" value="/habitat/depth/image"/>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+  <arg name="scene_name" default="2n8kARJN3HM"/>
+  <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_$(arg scene_name).yaml"/>
+
+  <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
+    <param name="task_config" value="$(arg config_path)"/>
+    <param name="rate" value="15"/>
+    <param name="agent_type" value="shortest_path_follower"/>
+    <param name="rgb_topic" value="/habitat/rgb/image"/>
+    <param name="depth_topic" value="/habitat/depth/image"/>
+    <param name="camera_info_topic" value="/habitat/rgb/camera_info"/>
+    <param name="true_pose_topic" value="/true_pose"/>
+    <param name="max_d_angle" value="0.4"/>
+    <param name="goal_radius" value="0.5"/>
+    <param name="camera_calib" value="/home/kirill/catkin_ws/src/tx2_fcnn_node/calib/habitat_camera_calib.yaml"/>
+    <param name="scene_name" value="$(arg scene_name)"/>
+  </node>
+
+  <node name="update_frame_id" pkg="depth_image_proc" type="update_frame_id.py" output="screen" />
+
+  <!-- Nodelet manager for this pipeline -->
+  <node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+
+
+  <!-- Convert to point cloud -->
+  <node pkg="nodelet" type="nodelet" name="depth_image_proc" args="load depth_image_proc/point_cloud_xyzrgb standalone_nodelet --no-bond" output="screen">
+    <param name="filter_resolution" value="0.05"/>
+    <param name="exact_sync" value="false"/>
+
+    <!-- Input: Camera calibration and metadata.  (sensor_msgs/CameraInfo) -->
+    <remap from="rgb/camera_info" to="/habitat/rgb/camera_info"/>
+
+    <!-- Input: Rectified depth image, registered to the RGB camera. (sensor_msgs/Image) -->
+    <remap from="depth_registered/image_rect" to="/habitat/depth/image"/>
+
+    <!-- Output: XYZ point cloud. If using PCL, subscribe as PointCloud<PointXYZ>.  (sensor_msgs/PointCloud2)  -->
+    <remap from="depth_registered/points" to="/habitat/points"/>
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_camera" args="0 0 0.88 -1.5707963267948966 0 -1.5707963267948966 base_link_noised camera_link_noised 100">
+  </node>
+
+  <!--node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 -1.5707963267948966 0 -1.5707963267948966 base_link_noised base_scan_noised 100">
+  </node-->
+
+  <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 0 0 0 base_link_noised base_scan_noised 100">
+  </node>
+
+  <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
+    <param name="x_std" value="0.0"/>
+    <param name="y_std" value="0.0"/>
+    <param name="theta_std" value="0.0"/>
+    <param name="noise_update_interval" value="10.0"/>
+  </node>
+</launch>
