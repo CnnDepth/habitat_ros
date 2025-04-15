@@ -9,6 +9,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool
 from habitat.utils.visualizations import maps
 from skimage.io import imsave
 
@@ -39,14 +40,16 @@ def draw_top_down_map(info, heading, output_size):
 
 class ShortestPathFollowerAgent(habitat.Agent):
 
-    def __init__(self, env, goal_radius):
+    def __init__(self, env, goal_radius, goal_positions=None):
         self.follower = ShortestPathFollower(env.sim, goal_radius, False)
+        self.goal_radius = goal_radius
 
         # initialize ROS publishers and subscribers
-        self.odom_subscriber = rospy.Subscriber('/odom', Odometry, self.odom_callback)
-        self.goal_subscriber = rospy.Subscriber('/exploration_goal', PoseStamped, self.goal_callback)
-        self.tf_listener = tf.TransformListener()
-        self.habitat_goal_publisher = rospy.Publisher('/habitat_goal', PoseStamped, queue_size=100, latch=True)
+        self.goal_subscriber = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_callback)
+        self.freeze_subscriber = rospy.Subscriber('/freeze', Bool, self.freeze_callback)
+        self.robot_pose_publisher = rospy.Publisher('/robot_pose_in_habitat_coords', PoseStamped, latch=True, queue_size=100)
+        self.goal_received = False
+        self.traveled_distance = 0
 
         # initialize poses
         self.robot_pose_in_slam_coords = None
@@ -57,6 +60,13 @@ class ShortestPathFollowerAgent(habitat.Agent):
         env.reset()
         self.update_time = rospy.Time.now()
         self.topdown_saved = False
+        self.freeze = False
+
+        if goal_positions is not None:
+            self.goal_positions = goal_positions
+        else:
+            self.goal_positions = []
+        self.goal_position_id = 0
 
 
     def normalize(self, angle):
@@ -67,52 +77,33 @@ class ShortestPathFollowerAgent(habitat.Agent):
         return angle
 
 
-    def odom_callback(self, msg):
-        self.robot_pose_in_slam_coords = msg.pose.pose
-
-
-    def get_robot_pose(self):
-        cur_pose = self.robot_pose_in_slam_coords
-        try:
-            pos, quat = self.tf_listener.lookupTransform(
-                                'map', 'odom',
-                                self.tf_listener.getLatestCommonTime('map',
-                                'odom'))
-        except:
-            print('NO TRANSFORM FROM ODOM TO MAP!!!!')
-            return None, None, None
-        if self.robot_pose_in_slam_coords is None:
-            print('NO ODOMETRY!!!')
-            return None, None, None
-        _, __, tf_angle = tf.transformations.euler_from_quaternion(quat)
-        _, __, odom_angle = tf.transformations.euler_from_quaternion([cur_pose.orientation.x, cur_pose.orientation.y, cur_pose.orientation.z, cur_pose.orientation.w])
-        print('Euler angles:', _, __, odom_angle)
-        current_x, current_y = cur_pose.position.x, cur_pose.position.y
-        current_x_new = current_x * math.cos(-tf_angle) + current_y * math.sin(-tf_angle)
-        current_y_new = -current_x * math.sin(-tf_angle) + current_y * math.cos(-tf_angle)
-        current_x_new += pos[0]
-        current_y_new += pos[1]
-        return current_x_new, current_y_new, odom_angle + tf_angle
+    def get_robot_pose(self, observations):
+        current_x, current_y = observations['gps']
+        current_y = -current_y
+        robot_angle = observations['compass'][0]
+        current_x_new = current_x * math.cos(-robot_angle) + current_y * math.sin(-robot_angle)
+        current_y_new = -current_x * math.sin(-robot_angle) + current_y * math.cos(-robot_angle)
+        return current_x, current_y, robot_angle
 
 
     def goal_callback(self, msg):
+        self.goal_received = True 
         # Receive goal pose in SLAM coords
         print('Received goal with coords: {}, {}'.format(msg.pose.position.x, msg.pose.position.y))
         self.goal_pose_in_slam_coords = msg.pose
         goal_x, goal_y = msg.pose.position.x, msg.pose.position.y
 
         # Find robot's position and orientation in SLAM and Habitat coords
-        slam_x, slam_y, slam_angle = self.get_robot_pose()
         habitat_position, habitat_orientation = self.robot_pose_in_habitat_coords
-        #print('Robot pose in habitat coords:', habitat_position, habitat_orientation)
+        print('Robot pose in habitat coords:', habitat_position, habitat_orientation)
         habitat_y, habitat_z, habitat_x = habitat_position
         _, __, habitat_angle = tf.transformations.euler_from_quaternion([habitat_orientation.x, habitat_orientation.z, habitat_orientation.y, habitat_orientation.w])
 
         # Calculate transform between SLAM and Habitat coordinate systems
-        d_angle = self.normalize(habitat_angle - slam_angle + np.pi)
+        d_angle = self.normalize(habitat_angle - self.slam_angle + np.pi)
         #print('D_ANGLE:', d_angle)
-        dx = habitat_x - (slam_x * math.cos(d_angle) + slam_y * math.sin(d_angle))
-        dy = habitat_y - (-slam_x * math.sin(d_angle) + slam_y * math.cos(d_angle))
+        dx = habitat_x - (self.slam_x * math.cos(d_angle) + self.slam_y * math.sin(d_angle))
+        dy = habitat_y - (-self.slam_x * math.sin(d_angle) + self.slam_y * math.cos(d_angle))
 
         # Compute goal position in Habitat coords
         goal_x_rotated = goal_x * math.cos(d_angle) + goal_y * math.sin(d_angle)
@@ -120,29 +111,48 @@ class ShortestPathFollowerAgent(habitat.Agent):
         self.goal_pose_in_habitat_coords = np.array([goal_y_rotated + dy, habitat_z, goal_x_rotated + dx])
         #print('GOAL COORDS IN HABITAT SYSTEM:', self.goal_pose_in_habitat_coords)
 
-        # publish goal position in Habitat coords
-        msg = PoseStamped()
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = 'map'
-        msg.pose.position.x = self.goal_pose_in_habitat_coords[2]
-        msg.pose.position.y = self.goal_pose_in_habitat_coords[0]
-        msg.pose.position.z = self.goal_pose_in_habitat_coords[1]
-        self.habitat_goal_publisher.publish(msg)
+
+    def freeze_callback(self, msg):
+        self.freeze = msg.data
 
 
     def reset(self):
         pass
 
 
-    def act(self, observations, env):
-        info = env.get_metrics()
-        if info['top_down_map'] is not None and not self.topdown_saved and (rospy.Time.now() - self.update_time).to_sec() > 1:
-            topdown_map = draw_top_down_map(info, observations['heading'][0], observations['rgb'][0].shape[0])
-            imsave('/home/kirill/topdown_map.png', topdown_map)
-            self.update_time = rospy.Time.now()
+    def goal_reached(self):
+        robot_position, robot_rotation = self.robot_pose_in_habitat_coords
+        # print(robot_position, robot_rotation)
+        dst_robot_to_goal = np.sqrt(np.sum((robot_position - self.goal_pose_in_habitat_coords) ** 2))
+        if dst_robot_to_goal < self.goal_radius * 1.2:
+            print('Goal reached!')
+        return (dst_robot_to_goal < self.goal_radius * 1.2)
 
-            print('TOPDOWN_MAP:', topdown_map)
+
+    def act(self, observations, env):
+        self.slam_x, self.slam_y, self.slam_angle = self.get_robot_pose(observations)
         self.robot_pose_in_habitat_coords = observations['agent_position']
+        robot_position, robot_rotation = self.robot_pose_in_habitat_coords
+        robot_pose_msg = PoseStamped()
+        robot_pose_msg.header.stamp = rospy.Time.now()
+        robot_pose_msg.header.frame_id = 'habitat'
+        robot_pose_msg.pose.position.x = robot_position[0]
+        robot_pose_msg.pose.position.y = robot_position[1]
+        robot_pose_msg.pose.position.z = robot_position[2]
+        robot_pose_msg.pose.orientation.w = robot_rotation.w
+        robot_pose_msg.pose.orientation.x = robot_rotation.x
+        robot_pose_msg.pose.orientation.y = robot_rotation.y
+        robot_pose_msg.pose.orientation.z = robot_rotation.z
+        self.robot_pose_publisher.publish(robot_pose_msg)
+        print('Robot pose in habitat coords:', self.robot_pose_in_habitat_coords[0])
+        if self.goal_pose_in_habitat_coords is None or self.goal_reached():
+            if self.goal_position_id < len(self.goal_positions):
+                self.goal_pose_in_habitat_coords = self.goal_positions[self.goal_position_id]
+            else:
+                self.goal_pose_in_habitat_coords = None
+            print('Switch to next goal:', self.goal_pose_in_habitat_coords)
+            self.goal_position_id += 1
+        # print('Freeze:', self.freeze)
         if keyboard.is_pressed('left'):
             return HabitatSimActions.TURN_LEFT
         elif keyboard.is_pressed('right'):
@@ -150,10 +160,18 @@ class ShortestPathFollowerAgent(habitat.Agent):
         elif keyboard.is_pressed('up'):
             return HabitatSimActions.MOVE_FORWARD
         elif self.goal_pose_in_habitat_coords is None:
+            #if not self.goal_received:
+                #print('Random action')
+                #return np.random.choice([HabitatSimActions.MOVE_FORWARD, HabitatSimActions.TURN_LEFT])
+            print('Total traveled distance:', self.traveled_distance)
             return HabitatSimActions.STOP
+        #elif self.freeze:
+        #    return HabitatSimActions.STOP
         else:
             next_action = self.follower.get_next_action(self.goal_pose_in_habitat_coords)
-            print(next_action)
+            if next_action == HabitatSimActions.MOVE_FORWARD:
+                self.traveled_distance += 0.2
+            # print('Next action:', next_action)
             if next_action is None:
                 print('CANNOT MOVE TO GOAL!!!')
                 return HabitatSimActions.STOP
