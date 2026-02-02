@@ -1,0 +1,148 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 50000
+SIMULATOR:
+  TURN_ANGLE: 5
+  TILT_ANGLE: 30
+  FORWARD_STEP_SIZE: 0.1
+  ACTION_SPACE_CONFIG: "v1"
+  AGENT_0:
+    SENSORS: ['RGB_SENSOR', 'RGB_SENSOR1', 'RGB_SENSOR2', 'RGB_SENSOR3', 'RGB_SENSOR4', 
+              'DEPTH_SENSOR1', 'DEPTH_SENSOR2', 'DEPTH_SENSOR3', 'DEPTH_SENSOR4', 
+              'SEMANTIC_SENSOR1', 'SEMANTIC_SENSOR2', 'SEMANTIC_SENSOR3', 'SEMANTIC_SENSOR4']
+    HEIGHT: 0.88
+    RADIUS: 0.18
+  HABITAT_SIM_V0:
+    GPU_DEVICE_ID: 0
+    ALLOW_SLIDING: True
+  SEMANTIC_SENSOR1:
+    UUID: 'semantic1'
+    TYPE: HabitatSimSemanticSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 0, 0]
+  SEMANTIC_SENSOR2:
+    UUID: 'semantic2'
+    TYPE: HabitatSimSemanticSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 1.5708, 0]
+  SEMANTIC_SENSOR3:
+    UUID: 'semantic3'
+    TYPE: HabitatSimSemanticSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 3.1416, 0]
+  SEMANTIC_SENSOR4:
+    UUID: 'semantic4'
+    TYPE: HabitatSimSemanticSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, -1.5708, 0]
+  RGB_SENSOR:
+    UUID: 'rgb'
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 0, 0]
+  RGB_SENSOR1:
+    UUID: 'rgb1'
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 0, 0]
+  RGB_SENSOR2:
+    UUID: 'rgb2'
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 1.5708, 0]
+  RGB_SENSOR3:
+    UUID: 'rgb3'
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 3.1416, 0]
+  RGB_SENSOR4:
+    UUID: 'rgb4'
+    TYPE: HabitatSimRGBSensor
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, -1.5708, 0]
+  DEPTH_SENSOR1:
+    UUID: 'depth1'
+    TYPE: HabitatSimDepthSensor
+    NORMALIZE_DEPTH: True
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    MIN_DEPTH: 0.2
+    MAX_DEPTH: 8.0
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 0, 0]
+  DEPTH_SENSOR2:
+    UUID: 'depth2'
+    TYPE: HabitatSimDepthSensor
+    NORMALIZE_DEPTH: True
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    MIN_DEPTH: 0.2
+    MAX_DEPTH: 8.0
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 1.5708, 0]
+  DEPTH_SENSOR3:
+    UUID: 'depth3'
+    TYPE: HabitatSimDepthSensor
+    NORMALIZE_DEPTH: True
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    MIN_DEPTH: 0.2
+    MAX_DEPTH: 8.0
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, 3.1416, 0]
+  DEPTH_SENSOR4:
+    UUID: 'depth4'
+    TYPE: HabitatSimDepthSensor
+    NORMALIZE_DEPTH: True
+    WIDTH: 640
+    HEIGHT: 360
+    HFOV: 90
+    MIN_DEPTH: 0.2
+    MAX_DEPTH: 8.0
+    POSITION: [0, 0.88, 0]
+    ORIENTATION: [0, -1.5708, 0]
+TASK:
+  TYPE: Nav-v0
+
+  SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR', 'GPS_SENSOR', 'COMPASS_SENSOR']
+  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+    GOAL_FORMAT: "POLAR"
+    DIMENSIONALITY: 2
+  GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+  SUCCESS:
+    SUCCESS_DISTANCE: 0.2
+
+DATASET:
+  TYPE: PointNav-v1
+  DATA_PATH: /home/kirill/habitat-lab/data/datasets/pointnav/pointnav_mp3d_v1/train/content/good_scenes/JeFG25nYj2p_1.json.gz

@@ -3,7 +3,7 @@
   <arg name="scene_name" default="2n8kARJN3HM"/>
   <arg name="config_path" default="/home/kirill/habitat-lab/configs/tasks/pointnav_mp3d_4x90_$(arg scene_name).yaml"/>
 
-  <node pkg="habitat_ros" type="main.py" name="habitat_agent">
+  <node pkg="habitat_ros" type="main.py" name="habitat_agent" output="screen">
     <param name="task_config" value="$(arg config_path)"/>
     <param name="rate" value="15"/>
     <param name="agent_type" value="shortest_path_follower"/>
@@ -139,7 +139,7 @@
   <node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_scan" args="0 0 0.88 0 0 0 base_link_noised base_scan_noised 100">
   </node>
   
-  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher">
+  <node pkg="pose_to_odom" type="pose_to_odom.py" name="odometry_publisher" output="screen">
   </node>
   
   <node pkg="depth_image_proc" type="merge_point_clouds4.py" name="merge_point_clouds">
@@ -149,7 +149,7 @@
   <!-- node pkg="tf" type="static_transform_publisher" name="static_transform_publisher_map_odom" args="0 0 0 0 0 0 map odom 100">
   </node -->
 
-  <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser">
+  <node pkg="pose_noiser" type="pose_noiser.py" name="pose_noiser" output="screen">
     <!-- param name="x_std" value="0.0075"/>
     <param name="y_std" value="0.000"/>
     <param name="theta_std" value="0.015"/ -->

@@ -201,7 +201,7 @@ class HabitatObservationPublisher:
             cur_z_angle = observations['compass'][0]
             cur_pose = PoseStamped()
             cur_pose.header.stamp = cur_time
-            cur_pose.header.frame_id = 'map'
+            cur_pose.header.frame_id = 'odom'
             cur_pose.pose.position.x = x
             cur_pose.pose.position.y = -y
             cur_pose.pose.position.z = 0.1#observations['agent_position'][0][1]
@@ -213,7 +213,7 @@ class HabitatObservationPublisher:
             self.tfbr.sendTransform((x, -y, observations['agent_position'][0][1]),
                                     tf.transformations.quaternion_from_euler(0, 0, cur_z_angle),
                                     cur_time,
-                                    'base_link', 'map')
+                                    'base_link', 'odom')
             self.pose_publisher.publish(cur_pose)
 
             cur_transform = TransformStamped()

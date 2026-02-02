@@ -20,9 +20,8 @@ from greedy_path_follower_agent import GreedyPathFollowerAgent
 from random_movement_agent import RandomMovementAgent
 from custom_sensors import AgentPositionSensor
 from publishers import HabitatObservationPublisher
-from habitat_map.mapper import Mapper
+# from habitat_map.mapper import Mapper
 from habitat_baselines.config.default import get_config
-from habitat_map.utils import draw_top_down_map
 from skimage.io import imsave
 from tqdm import tqdm
 from habitat_map import env_orb
@@ -98,7 +97,7 @@ class HabitatRunner():
         #self.env = env_orb.Env(config=config)
         print('Environment created')
 
-        self.mapper = Mapper()
+        # self.mapper = Mapper()
         #self.semantic_predictor = SemanticPredictor(threshold=0.35)
         goal_positions = np.loadtxt('/home/kirill/catkin_ws/src/habitat_ros/goal_positions/mp3d/{}.txt'.format(scene_name))
         #goal_positions = np.loadtxt('/home/kirill/catkin_ws/src/habitat_ros/goal_positions/mipt.txt')
@@ -138,7 +137,7 @@ class HabitatRunner():
         observations = self.env.reset()
         self.env.step(HabitatSimActions.MOVE_FORWARD)
 
-        self.mapper.reset()
+        # self.mapper.reset()
         self.agent.reset()
         reset_msg = String()
         reset_msg.data = 'reset'
